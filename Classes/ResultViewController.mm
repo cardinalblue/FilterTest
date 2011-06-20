@@ -44,6 +44,19 @@
 }
 */
 
+CGImageRef createStandardImage(CGImageRef image) {
+	const size_t width = CGImageGetWidth(image);
+	const size_t height = CGImageGetHeight(image);
+	CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+	CGContextRef ctx = CGBitmapContextCreate(NULL, width, height, 8, 4*width, space,
+											 kCGBitmapByteOrder32Big | kCGImageAlphaPremultipliedFirst);
+	CGColorSpaceRelease(space);
+	CGContextDrawImage(ctx, CGRectMake(0, 0, width, height), image);
+	CGImageRef dstImage = CGBitmapContextCreateImage(ctx);
+	CGContextRelease(ctx);
+	return dstImage;
+}
+
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning]; // Releases the view if it doesn't have a superview
     // Release anything that's not essential, such as cached data
@@ -64,14 +77,18 @@
     CGImageRef inImage =[resultImage.image CGImage];   //Input image cgi
     CGContextRef ctx;
     
+    CGImageRef standardized = createStandardImage([srcImage CGImage]);
     CFDataRef m_ori_DataRef;
-	m_ori_DataRef = CGDataProviderCopyData(CGImageGetDataProvider([srcImage CGImage]));
+	m_ori_DataRef = CGDataProviderCopyData(CGImageGetDataProvider(standardized));
+	CGImageRelease(standardized);
+    
+	//m_ori_DataRef = CGDataProviderCopyData(CGImageGetDataProvider([srcImage CGImage]));
 	UInt8 * m_ori_PixelBuf = (UInt8 *) CFDataGetBytePtr(m_ori_DataRef);
     
 	
 	CFDataRef m_DataRef;
 	m_DataRef = CGDataProviderCopyData(CGImageGetDataProvider(inImage));
-	UInt8 * m_PixelBuf = (UInt8 *) CFDataGetBytePtr(m_DataRef);
+	UInt8 *m_PixelBuf = (UInt8 *) CFDataGetBytePtr(m_DataRef);
     
 	int length = CFDataGetLength(m_DataRef);
     CGImageGetBitsPerComponent(inImage);
@@ -81,30 +98,34 @@
     
 	for (int index = 0; index < length; index += 4)
 	{
-		Byte tempR = m_ori_PixelBuf[index + 1];
-		Byte tempG = m_ori_PixelBuf[index + 2];
-		Byte tempB = m_ori_PixelBuf[index + 3];
+		Byte tempR = m_PixelBuf[index + 1];
+		Byte tempG = m_PixelBuf[index + 2];
+		Byte tempB = m_PixelBuf[index + 3];
 		
         //		int outputRed = level + tempR;
         //		int outputGreen = level + tempG;
         //		int outputBlue = level + tempB;
 		
-        int outputRed = tempR;
-		int outputGreen = tempG;
-		int outputBlue =  tempB;
+//        int outputRed = tempR;
+//		int outputGreen = tempG;
+//		int outputBlue =  tempB;
+//        
+//		if (outputRed>255) outputRed=255;
+//		if (outputGreen>255) outputGreen=255;
+//		if (outputBlue>255) outputBlue=255;
+//		
+//		if (outputRed<0) outputRed=0;
+//		if (outputGreen<0) outputGreen=0;
+//		if (outputBlue<0) outputBlue=0;
+        int outputRed = 255;
+        int outputGreen = 255;
+        int outputBlue = 255;
         
-		if (outputRed>255) outputRed=255;
-		if (outputGreen>255) outputGreen=255;
-		if (outputBlue>255) outputBlue=255;
-		
-		if (outputRed<0) outputRed=0;
-		if (outputGreen<0) outputGreen=0;
-		if (outputBlue<0) outputBlue=0;
-		
-    
-		m_ori_PixelBuf[index + 1] = outputRed; 
-		m_ori_PixelBuf[index + 2] = outputGreen; 
-		m_ori_PixelBuf[index + 3] = outputBlue;
+		if (tempR == 0){
+            m_ori_PixelBuf[index + 1] = outputRed;
+            m_ori_PixelBuf[index + 2] = outputGreen;
+            m_ori_PixelBuf[index + 3] = outputBlue;
+        }
 		
 	}
 	
@@ -114,7 +135,7 @@
 								8,
 								CGImageGetBytesPerRow( inImage ),
 								CGImageGetColorSpace(inImage),
-								kCGBitmapByteOrder32Little|kCGImageAlphaPremultipliedFirst);
+								kCGBitmapByteOrder32Big | kCGImageAlphaPremultipliedFirst);
     
 	CGImageRef imageRef = CGBitmapContextCreateImage (ctx);
 	UIImage* rawImage = [UIImage imageWithCGImage:imageRef];
